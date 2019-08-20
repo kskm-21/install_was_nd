@@ -31,11 +31,6 @@
       dest: "{{ repo_loc }}/"
       creates: "{{ repo_loc }}/IIM_1.8.2"
     when: installc_stat.stat.exists == False
-  - name: copy the custom install file in IIM binaries dir
-    copy:
-      src: /home/xgzpqkon/playbooks/install.xml
-      dest: "{{ repo_loc }}/IIM_1.8.2/install.xml"
-      remote_src: yes
   - name: Install Installation Manager v1.8.2
     shell: "{{ repo_loc }}/IIM_1.8.2/userinstc -acceptLicense"
   - name: Check if the package_dir already exists.
