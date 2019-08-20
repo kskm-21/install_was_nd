@@ -3,7 +3,7 @@
   gather_facts: no
   become: yes
   become_user: '{{ svc_user }}'
-  become_method: su
+  become_method: sudo
   vars:
     svc_user: svctnaix
     WAS_loc: /opt/IBM/WAS/
