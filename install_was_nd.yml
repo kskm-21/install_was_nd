@@ -35,6 +35,7 @@
     copy:
       src: /home/xgzpqkon/playbooks/install.xml
       dest: "{{ repo_loc }}/IIM_1.8.2/install.xml"
+      remote_src: yes
   - name: Install Installation Manager v1.8.2
     shell: "{{ repo_loc }}/IIM_1.8.2/userinstc -acceptLicense"
   - name: Check if the package_dir already exists.
@@ -45,6 +46,7 @@
     unarchive:
       src: "{{ repo_loc }}/{{ package_arc }}"
       dest: '{{ repo_loc }}'
+      remote_src: yes
     when: package_stat.stat.exists == False
   - name: Check if the repository files exists in package directory
     stat:
