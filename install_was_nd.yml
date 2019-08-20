@@ -1,0 +1,89 @@
+--- #This playbook installs IIM v1.8.2 and WASND v8.5.5.0
+- hosts: localhost
+  gather_facts: no
+  become: yes
+  become_user: '{{ svc_user }}'
+  become_method: su
+  vars:
+    svc_user: svctnaix
+    WAS_loc: /opt/IBM/WAS/
+    repo_loc: /app/WAS_files
+    IIM_loc: /opt/IBM/InstallationManager/
+    imcl_loc: "{{ IIM_loc }}/eclipse/tools"
+    package_name: WASND855
+    fixpack_name: WAS855FP8
+    package_dir: "{{ repo_loc }}/{{ package_name }}"
+    package_arc: "{{ package_name }}.tar"
+    fixpack_arc: "{{ fixpack_name }}.tar"
+  tasks:
+  - name: Check if IIM is installed
+    stat:
+      path: "/home/{{svc_user }}/etc/.ibm/InstallationManager.dat"
+    register: iim_dat
+  - name: Check if the IIM installation files avaialble
+    stat:
+      path: "{{ repo_loc }}/installc"
+    register: installc_stat
+    when: iim_dat.stat.exists == False
+  - name: Expand IIM archive.
+    unarchive:
+      src: "{{ repo_loc }}/IIM_1.8.2.zip"
+      dest: "{{ repo_loc }}/"
+      creates: "{{ repo_loc }}/IIM_1.8.2"
+    when: installc_stat.stat.exists == False
+  - name: copy the custom install file in IIM binaries dir
+    copy:
+      src: /home/xgzpqkon/playbooks/install.xml
+      dest: "{{ repo_loc }}/IIM_1.8.2/install.xml"
+  - name: Install Installation Manager v1.8.2
+    shell: "{{ repo_loc }}/IIM_1.8.2/userinstc -acceptLicense"
+  - name: Check if the package_dir already exists.
+    stat:
+      path: '{{ package_dir }}'
+    register: package_stat
+  - name: Expand package archive
+    unarchive:
+      src: "{{ repo_loc }}/{{ package_arc }}"
+      dest: '{{ repo_loc }}'
+    when: package_stat.stat.exists == False
+  - name: Check if the repository files exists in package directory
+    stat:
+      path: "{{ package_dir }}/repository.config"
+    register: repository_file
+  - name: Check if there is a WAS installation already
+    stat:
+      path: "{{ WAS_loc }}/bin"
+    register: existing_was
+  - name: Install WAS package
+    shell: "{{ imcl_loc }}/imcl install com.ibm.websphere.ND.v85_8.5.5000.20130514_1044 -repositories {{ package_dir }} -installationDirectory {{ WAS_loc }} -acceptLicense"
+    when:
+      - repository_file.stat.exists
+      - existing_was.stat.exists == False
+    register: imcl_output
+  - debug:
+      var: imcl_output
+  - name: Check if fixpack repo file exixts.
+    stat:
+      path: "{{ repo_loc }}/{{ fixpack_name }}/repository.config"
+    register: fixpack_repo
+  - name: Check if WAS installation exixts.
+    stat:
+      path: "{{ WAS_loc }}/bin"
+    register: was_path
+  - name: Expand Fixpack-8 archive
+    unarchive:
+      src: "{{ repo_loc }}/{{ fixpack_arc }}"
+      dest: '{{ repo_loc }}'
+    when: fixpack_repo.stat.exists == False
+  - name: Check current WAS fixpack level
+    shell: /opt/IBM/WAS/bin/versionInfo.sh | grep 'Version      '|awk '{print $2}'
+    register: version_info
+  - name: Install Fixpack-8 for WAS v855
+    shell: "{{ imcl_loc }}/imcl install com.ibm.websphere.ND.v85_8.5.5008.20151112_0939 -repositories {{ repo_loc }}/{{ fixpack_name }}/ -installationDirectory {{ WAS_loc }} -acceptLicense"
+    register: fp_install_out
+    when:
+      - fixpack_repo.stat.exists
+      - was_path.stat.exists
+      - version_info.stdout != "8.5.5.8"
+  - debug:
+      var: fp_install_out
